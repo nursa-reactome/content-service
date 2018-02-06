@@ -84,12 +84,12 @@ public class QueryObjectController {
     @ResponseBody //TODO: Swagger is not showing the defaultValue
     public Collection<DatabaseObject> findByIds( @ApiParam(value = "A comma separated list of identifiers", defaultValue = "R-HSA-1640170, R-HSA-109581, 199420", required = true)
                                                 @RequestBody String post) {
-        Collection<Object> ids = new ArrayList<>();
+        Collection<String> ids = new ArrayList<>();
         for (String id : post.split(",|;|\\n|\\t")) {
             ids.add(id.trim());
         }
         if (ids.size() > 20) ids = ids.stream().skip(0).limit(20).collect(Collectors.toSet());
-        Collection<DatabaseObject> databaseObjects = advancedDatabaseObjectService.findByIds(ids, RelationshipDirection.OUTGOING);
+        Collection<DatabaseObject> databaseObjects = advancedDatabaseObjectService.findByStIds(ids, RelationshipDirection.OUTGOING);
         if (databaseObjects == null || databaseObjects.isEmpty())
             throw new NotFoundException("Ids: " + ids.toString() + " have not been found in the System");
         infoLogger.info("Request for DatabaseObjects for ids: {}", ids);
