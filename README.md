@@ -1,4 +1,4 @@
-<img src=https://cloud.githubusercontent.com/assets/6883670/22938783/bbef4474-f2d4-11e6-92a5-07c1a6964491.png width=220 height=100 />
+[<img src=https://user-images.githubusercontent.com/6883670/31999264-976dfb86-b98a-11e7-9432-0316345a72ea.png height=75 />](https://reactome.org)
 
 # Reactome Content Service
 
@@ -10,7 +10,7 @@ The Content Service is the Reactome API to access the data. It is based on Sprin
 
 * :warning: Pre-Requirement (in the given order)
     1. Maven 3.X - [Installation Guide](http://maven.apache.org/install.html)
-    2. Reactome Graph Database - [Installation Guide](http://www.reactome.org/pages/documentation/developer-guide/graph-database/)
+    2. Reactome Graph Database - [Installation Guide](https://reactome.org/dev/graph-database/)
     3. Interactor Database - [Installation Guide](https://github.com/reactome-pwp/interactors-core)
     4. Search SolR Index - [search-indexer](http://github.com/reactome/search-indexer)
     5. Mail Server (if you don't have a valid SMTP Server, please refer to [FakeSMTP](http://nilhcem.com/FakeSMTP/index.html)

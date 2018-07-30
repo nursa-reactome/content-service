@@ -1,8 +1,9 @@
 package org.reactome.server.service.utils;
 
-import org.apache.log4j.Logger;
-import org.reactome.server.lru.LruFolderContentChecker;
-import org.reactome.server.lru.LruFolderContentCheckerFileDeletedHandler;
+import org.reactome.server.utils.lru.LruFolderContentChecker;
+import org.reactome.server.utils.lru.LruFolderContentCheckerFileDeletedHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;
 
 /**
@@ -10,7 +11,8 @@ import org.springframework.context.annotation.Scope;
  */
 @Scope("singleton")
 public class TuplesFileCheckerController implements LruFolderContentCheckerFileDeletedHandler {
-    private static Logger logger = Logger.getLogger(TuplesFileCheckerController.class.getName());
+
+    private static Logger logger = LoggerFactory.getLogger("threadLogger");
 
     private static Thread checker = null;
 
@@ -21,6 +23,7 @@ public class TuplesFileCheckerController implements LruFolderContentCheckerFileD
     private Long ttl;
 
     public TuplesFileCheckerController() {
+        Thread.currentThread().setName("CS-TupleFilesChecker");
     }
 
     public void setPathDirectory(String pathDirectory) {
@@ -59,18 +62,24 @@ public class TuplesFileCheckerController implements LruFolderContentCheckerFileD
             folderContentChecker.addCheckerFileDeletedHandler(this);
             checker = new Thread(folderContentChecker);
             try{
-                checker.setName("TuplesFileCheckerController");
+                checker.setName("LruFolderContentChecker");
             }catch (SecurityException e){
-                logger.warn("TuplesFileCheckerController thread renaming failed!");
+                logger.warn("LruFolderContentChecker thread renaming failed!");
             }
             checker.start();
-            logger.info("TuplesFileCheckerController started...");
+            logger.info(pathDirectory + " is now under LRU check...");
+        }
+    }
+
+    public void interrupt() {
+        if (checker != null) {
+            checker.interrupt();
+            logger.info(LruFolderContentChecker.class.getSimpleName() + " interrupted");
         }
     }
 
     @Override
     public void onLruFolderContentCheckerFileDeleted(String fileName) {
-        //TODO!
-//        Tokenizer.removeAssociatedToken(fileName);
+        //Nothing here TODO?
     }
 }

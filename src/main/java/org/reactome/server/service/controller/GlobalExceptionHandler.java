@@ -2,6 +2,7 @@ package org.reactome.server.service.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.batik.transcoder.TranscoderException;
 import org.apache.catalina.connector.ClientAbortException;
 import org.hupo.psi.mi.psicquic.registry.client.PsicquicRegistryClientException;
 import org.neo4j.ogm.drivers.http.request.HttpRequestException;
@@ -13,9 +14,11 @@ import org.reactome.server.interactors.tuple.exception.ParserException;
 import org.reactome.server.interactors.tuple.exception.TupleParserException;
 import org.reactome.server.search.exception.SolrSearcherException;
 import org.reactome.server.service.exception.*;
+import org.reactome.server.tools.diagram.exporter.common.analysis.AnalysisException;
 import org.reactome.server.tools.diagram.exporter.common.profiles.factory.DiagramJsonDeserializationException;
 import org.reactome.server.tools.diagram.exporter.common.profiles.factory.DiagramJsonNotFoundException;
 import org.reactome.server.tools.diagram.exporter.common.profiles.factory.DiagramProfileException;
+import org.reactome.server.tools.diagram.exporter.raster.ehld.exception.EhldException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -30,6 +33,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import psidev.psi.mi.tab.PsimiTabException;
 
@@ -51,6 +55,7 @@ import java.security.cert.CertificateException;
 class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger("errorLogger");
+    private static final Logger onlyEmailLogger = LoggerFactory.getLogger("onlyEmailLogger");
 
     //================================================================================
     // NotFound
@@ -70,6 +75,19 @@ class GlobalExceptionHandler {
     ResponseEntity<String> handleNotFoundTextPlainException(HttpServletRequest request, NotFoundTextPlainException e) {
         //no logging here!
         return toJsonResponse(HttpStatus.NOT_FOUND, request, e.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(NoResultsFoundException.class)
+    @ResponseBody
+    ResponseEntity<String> handleNoResultsFoundException(HttpServletRequest request, NoResultsFoundException e) {
+        //no logging here!
+        StringBuffer requestURL = (request == null) ? new StringBuffer("") : request.getRequestURL();
+        ErrorInfo errorInfo = new ErrorInfo(HttpStatus.NOT_FOUND, requestURL, e.getTargets(), e.getMessage());
+
+        // TODO targets : "[ { term:"aaa", target:"yes" } ... ]
+
+        return toJsonResponse(HttpStatus.NOT_FOUND, request, errorInfo);
     }
 
     //================================================================================
@@ -240,12 +258,36 @@ class GlobalExceptionHandler {
         return toJsonResponse(HttpStatus.INTERNAL_SERVER_ERROR, request, e.getMessage());
     }
 
-    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler(DiagramProfileException.class)
     @ResponseBody
     ResponseEntity<String> handleDiagramProfileException(HttpServletRequest request, DiagramProfileException e) {
         logger.warn("DiagramProfileException: " + e.getMessage() + " for request: " + request.getRequestURL());
-        return toJsonResponse(HttpStatus.NOT_FOUND, request, e.getMessage());
+        return toJsonResponse(HttpStatus.INTERNAL_SERVER_ERROR, request, e.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(AnalysisException.class)
+    @ResponseBody
+    ResponseEntity<String> handleAnalysisException(HttpServletRequest request, AnalysisException e) {
+        logger.warn("AnalysisException: " + e.getMessage() + " for request: " + request.getRequestURL());
+        return toJsonResponse(HttpStatus.INTERNAL_SERVER_ERROR, request, e.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(EhldException.class)
+    @ResponseBody
+    ResponseEntity<String> handleEhldException(HttpServletRequest request, EhldException e) {
+        logger.warn("EhldException: " + e.getMessage() + " for request: " + request.getRequestURL());
+        return toJsonResponse(HttpStatus.INTERNAL_SERVER_ERROR, request, e.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(TranscoderException.class)
+    @ResponseBody
+    ResponseEntity<String> handleTranscoderException(HttpServletRequest request, TranscoderException e) {
+        logger.warn("SVG TranscoderException: " + e.getMessage() + " for request: " + request.getRequestURL());
+        return toJsonResponse(HttpStatus.INTERNAL_SERVER_ERROR, request, e.getMessage());
     }
 
     //================================================================================
@@ -276,12 +318,12 @@ class GlobalExceptionHandler {
         return toJsonResponse(HttpStatus.INTERNAL_SERVER_ERROR, request, "Specified class was not found");
     }
 
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     @ResponseBody
     ResponseEntity<String> handleHttpRequestMethodNotSupportedException(HttpServletRequest request, HttpRequestMethodNotSupportedException e) {
         logger.warn("HttpRequestMethodNotSupportedException: " + e.getMessage() + " for request: " + request.getRequestURL());
-        return toJsonResponse(HttpStatus.INTERNAL_SERVER_ERROR, request, e.getMessage());
+        return toJsonResponse(HttpStatus.METHOD_NOT_ALLOWED, request, e.getMessage());
     }
 
     @ResponseStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
@@ -298,6 +340,14 @@ class GlobalExceptionHandler {
     ResponseEntity<String> handleHttpMediaTypeNotAcceptableException(HttpServletRequest request, HttpMediaTypeNotAcceptableException e) {
         logger.warn("HttpMediaTypeNotSupportedException: " + request.getRequestURL(), e.getMessage());
         return toJsonResponse(HttpStatus.NOT_ACCEPTABLE, request, e.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    @ResponseBody
+    ResponseEntity<String> handleMethodArgumentTypeMismatchException(HttpServletRequest request, MethodArgumentTypeMismatchException e) {
+        logger.warn("MethodArgumentTypeMismatchException: " + request.getRequestURL(), e.getMessage());
+        return toJsonResponse(HttpStatus.BAD_REQUEST, request, e.getMessage());
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
@@ -333,10 +383,18 @@ class GlobalExceptionHandler {
         return toJsonResponse(HttpStatus.BAD_REQUEST, request, e.getMessage());
     }
 
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(DiagramExporterException.class)
+    @ResponseBody
+    ResponseEntity<String> handleRasterException(HttpServletRequest request, DiagramExporterException e) {
+        logger.warn("DiagramExporterException was caught for request: " + request.getRequestURL());
+        return toJsonResponse(HttpStatus.BAD_REQUEST, request, e.getMessage());
+    }
+
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler(MissingSBMLException.class)
     @ResponseBody
-    ResponseEntity<String> handleMissingSBMLExceptionn(HttpServletRequest request, MissingSBMLException e) {
+    ResponseEntity<String> handleMissingSBMLException(HttpServletRequest request, MissingSBMLException e) {
         logger.error("MissingSBMLException was caught for request: " + request.getRequestURL(), e);
         return toJsonResponse(HttpStatus.INTERNAL_SERVER_ERROR, request, e.getMessage());
     }
@@ -347,6 +405,22 @@ class GlobalExceptionHandler {
     ResponseEntity<String> handleUnclassified(HttpServletRequest request, Exception e) {
         logger.error("An unspecified exception was caught for request: " + request.getRequestURL(), e);
         return toJsonResponse(HttpStatus.INTERNAL_SERVER_ERROR, request, e.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(NullPointerException.class)
+    @ResponseBody
+    ResponseEntity<String> handleNullPointerException(HttpServletRequest request, NullPointerException e) {
+        onlyEmailLogger.error("NullPointerException was caught for request: " + request.getRequestURL(), e);
+        return toJsonResponse(HttpStatus.INTERNAL_SERVER_ERROR, request, "Something unexpected happened and the error has been reported.");
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(BadRequestException.class)
+    @ResponseBody
+    ResponseEntity<String> handleBadRequestException(HttpServletRequest request, BadRequestException e) {
+        logger.warn("BadRequestException was caught for request: " + request.getRequestURL());
+        return toJsonResponse(HttpStatus.BAD_REQUEST, request, e.getMessage());
     }
 
     /*
@@ -366,8 +440,21 @@ class GlobalExceptionHandler {
                     .body(mapper.writeValueAsString(new ErrorInfo(status, requestURL, exceptionMessage)));
         } catch (JsonProcessingException e1) {
             logger.error("Could not process to JSON the given ErrorInfo instance", e1);
+            return ResponseEntity.status(status).headers(responseHeaders).body("");
+        }
+    }
+
+    private ResponseEntity<String> toJsonResponse(HttpStatus status, HttpServletRequest request, ErrorInfo errorInfo) {
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.add("Content-Type", "application/json");
+        try {
+            ObjectMapper mapper = new ObjectMapper();
             return ResponseEntity.status(status)
-                    .headers(responseHeaders).body("");
+                    .headers(responseHeaders)
+                    .body(mapper.writeValueAsString(errorInfo));
+        } catch (JsonProcessingException e1) {
+            logger.error("Could not process to JSON the given ErrorInfo instance", e1);
+            return ResponseEntity.status(status).headers(responseHeaders).body("");
         }
     }
 }
