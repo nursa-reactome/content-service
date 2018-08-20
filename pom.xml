@@ -71,8 +71,8 @@
         <pmd.version>3.6</pmd.version>
         <failOnMissingWebXml>false</failOnMissingWebXml>
  
-        <!--  Port used for development. -->
-        <server.port>8686</server.port>
+        <!-- Port used for production. -->
+        <content.server.port>8686</content.server.port>
     </properties>
 
     <dependencies>
@@ -232,7 +232,7 @@
                 <version>${tomcat.version}</version>
                 <configuration>
                     <path>${deploymentPath}</path>
-                    <port>${server.port}</port>
+                    <port>${content.server.port}</port>
                 </configuration>
             </plugin>
             <plugin>
